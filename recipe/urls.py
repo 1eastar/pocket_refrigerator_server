@@ -13,5 +13,6 @@ urlpatterns = [
     path('', include(router.urls)),
     path('recipestore/<int:pk>/', views.UserRecipeStoreView.as_view()),
     path('recipehistory/<int:pk>/', views.UserRecipeHistoryView.as_view()),
-    
+    path('recipeitems/', views.RecipeItemListView.as_view()),
+    path('recipeitems/<int:pk>/', views.RecipeItemDetailView.as_view()),
 ]

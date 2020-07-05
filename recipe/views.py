@@ -1,6 +1,6 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.models import User
-from django.http import HttpResponse
+from django.http import HttpResponse, Http404
 from django.apps import apps
 from django.conf import settings
 
@@ -13,6 +13,7 @@ from rest_framework.views import APIView
 # from rest_framework_jwt.authentication import JSONWebTokenAuthentication
 
 from . import models, serializers
+from refri.models import BasicItem, Item
 
 # Create your views here.
 
@@ -39,20 +40,40 @@ class RecipeViewSet(viewsets.ModelViewSet):
 
     @action(detail=True, methods=['GET'])
     def like(self, request, pk):
+        user = self.request.user
+        like_instance = models.Like.objects.get(author=user)
+        if like_instance.exists():
+            return Response({
+                "success": False,
+                "msg": "이미 좋아요를 누르셨습니다."
+            }, status=status.HTTP_406_NOT_ACCEPTABLE)
         recipe = self.get_object()
         recipe.like_num += 1
         recipe.save()
-        newLike = models.Like.objects.create(author=self.request.user , recipe=recipe)
+        newLike = models.Like.objects.create(author=user, recipe=recipe)
         recipe_serializer = serializers.RecipeSerializer(recipe)
         return Response(recipe_serializer.data, status=status.HTTP_200_OK)
     
     @action(detail=True, methods=['GET'])
     def cancel_like(self, request, pk):
+        """
+        좋아요 안 눌렀을 때는 좋아요 기능을 함.
+        * 없앨까 고민
+        """
+        user = self.request.user
+        like_instance = models.Like.objects.get(author=user)
+        if not like_instance.exists():
+            recipe = self.get_object()
+            recipe.like_num += 1
+            recipe.save()
+            newLike = models.Like.objects.create(author=user, recipe=recipe)
+            recipe_serializer = serializers.RecipeSerializer(recipe)
+            return Response(recipe_serializer.data, status=status.HTTP_200_OK)
         recipe = self.get_object()
         if recipe.like_num > 1:
             recipe.like_num -= 1
             recipe.save()
-        like = models.Like.objects.get(recipe=recipe, author=self.request.user)
+        like = models.Like.objects.get(recipe=recipe, author=user)
         like.delete()
 
         recipe_serializer = serializers.RecipeSerializer(recipe)
@@ -85,6 +106,83 @@ class RecipeViewSet(viewsets.ModelViewSet):
         serializer = serializers.RecipeSerializer(recipe)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
+class RecipeItemListView(APIView):
+    authentication_classes = [authentication]
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, format=None):
+        """
+        get url parameters = {
+            recipe_id: number,
+        }
+        """
+        user = self.request.user
+        recipe = models.Recipe.objects.get(pk=self.request.GET.get('recipe_id'))
+        recipe_items = models.RecipeItem.objects.filter(recipe=recipe)
+        # recipe_items = models.RecipeItem.objects.all()
+        serializer = serializers.RecipeItemSerializer(recipe_items, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+    def post(self, request, format=None):
+        """
+        data = {
+            amount: number,
+            recipe_id: number,
+            item_id?: number,
+            basic_item_id?: number,
+        }
+        """
+        amount = request.data['amount']
+        recipe_id = request.data['recipe_id']
+        item_id = request.data['item_id']
+        basic_item_id = request.data['basic_item_id']
+        if not item_id and not basic_item_id:
+            return Response({
+                "success": False,
+                "msg": "item 또는 basic item들 중 하나를 선택해야합니다."
+            })
+
+        recipe = models.Recipe.objects.get(pk=recipe_id)
+        if not item_id:
+            basic_item = BasicItem.objects.get(pk=basic_item_id)
+            recipe_item = models.RecipeItem.objects.create(amount=amount, recipe=recipe, basic_item=basic_item)
+        else:
+            item = Item.objects.get(pk=item_id)
+            recipe_item = models.RecipeItem.objects.create(amount=amount, recipe=recipe, item=item)
+
+        serializer = serializers.RecipeItemSerializer(recipe_item)
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+class RecipeItemDetailView(APIView):
+    authentication_classes = [authentication]
+    permission_classes = [IsAuthenticated]
+
+    def get_object(self, pk):
+        try:
+            return models.RecipeItem.objects.get(pk=pk)
+        except models.RecipeItem.DoesNotExist:
+            raise Http404
+
+    def get(self, request, pk, format=None):
+        recipe_item = self.get_object(pk)
+        serializer = serializers.RecipeItemSerializer(recipe_item)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+    def put(self, request, pk, format=None):
+        recipe_item = self.get_object(pk)
+        serializer = serializers.RecipeItemSerializer(recipe_item, data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        return Response(serializer.errer, status=status.HTTP_400_BAD_REQUEST)
+
+    def delete(self, requsst, pk, format=None):
+        recipe_item = self.get_object(pk)
+        recipe_item.delete()
+        return Response({
+            "success": True,
+            "msg": "삭제되었습니다."
+        }, status=status.HTTP_204_NO_CONTENT)
 
 
 class UserRecipeStoreView(APIView):
