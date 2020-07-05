@@ -5,8 +5,8 @@ from django.conf import settings
 # Create your models here.
 
 class Recipe(models.Model):
-    name = models.CharField(default='', max_length=20)
-    author_comment = models.TextField(max_length=200)
+    name = models.CharField(default='', max_length=50)
+    author_comment = models.TextField()
     # isKeep = models.BooleanField(default=False)     # 찜한 레시피
     # isHistory = models.BooleanField(default=True)       # 레시피 히스토리, 사용한 레시피
     # isBest = models.BooleanField(default=False)
@@ -67,7 +67,7 @@ class Like(models.Model):
 
 
 class Comment(models.Model):
-    content = models.TextField(max_length=100)
+    content = models.TextField(max_length=500)
     report_num = models.IntegerField(default=0)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)

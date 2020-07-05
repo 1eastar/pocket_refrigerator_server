@@ -26,13 +26,13 @@ class Item(models.Model):
     position = models.IntegerField(default=0) # 냉장, 냉동, 실온
     dday = models.IntegerField(default=0)
     ddate = models.CharField(max_length=8, default='00.00.00')
-    name = models.CharField(default='', max_length=20)
+    name = models.CharField(default='', max_length=50)
     category = models.CharField(default='', max_length=20)
-    user_comment = models.TextField(max_length=200)
+    user_comment = models.TextField()
     amount = models.IntegerField(default=0) # 개수
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-    create_type = models.IntegerField(default=0) # 바코드, 직접입력
+    create_type = models.IntegerField(default=-1) # 0: 바코드, 1: 직접입력
     exist = models.BooleanField(default=False)
     
     author = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
@@ -58,7 +58,7 @@ class BasicItem(models.Model):
 
 class Memo(models.Model):
     color = models.CharField(max_length=7, default='#fff44f')
-    content = models.TextField(max_length=500)
+    content = models.TextField()
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

@@ -53,8 +53,8 @@ class Userdata(models.Model):
 
 class Notice(models.Model):
     post_type = models.IntegerField(default=0)  # 0: 공지사항, 1: FAQ
-    title = models.CharField(max_length=30, null=False)
-    content = models.TextField(max_length=500, null=True)
+    title = models.CharField(max_length=100, null=False)
+    content = models.TextField(null=True)
     visit_count = models.IntegerField(default=0)
     image = models.ImageField(upload_to="", null=True, blank=True)     # file url 설정 (upload_to)
     file = models.FileField(upload_to="", null=True, blank=True)     # file url 설정 (upload_to)
@@ -66,10 +66,10 @@ class Notice(models.Model):
 
 
 class Barcode(models.Model):
-    barcode_num = models.IntegerField(default=0, null=False)
+    barcode_num = models.CharField(default='0000000000000', max_length=13, null=False)
     # barcode_data = ArrayField(ArrayField(models.CharField(), size=20), size=100000)
     # array model ????????
-    item_name = models.CharField(max_length=30)
+    item_name = models.CharField(max_length=50)
     item_category = models.CharField(max_length=20, default="")
     item_dday = models.IntegerField(null=False)
     item_ddate = models.DateField(default=datetime.date.today)
@@ -85,7 +85,7 @@ class Report(models.Model):
     report_type = models.IntegerField(default=-1)    # 0: user, 1: recipe, 2: comment
     report_object_id = models.IntegerField(default=-1)
     report_category = models.IntegerField(default=-1)
-    content = models.TextField(max_length=200)
+    content = models.TextField(max_length=1000)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

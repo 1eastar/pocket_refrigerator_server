@@ -15,7 +15,7 @@ import os, json
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 ROOT_DIR = os.path.dirname(BASE_DIR)
-SECRET_DIR = os.path.join(ROOT_DIR, 'pf_server/.secret')
+SECRET_DIR = os.path.join(ROOT_DIR, 'pocketrefriserver/.secret')
 secrets = json.load(open(os.path.join(SECRET_DIR, 'secret.json'), 'rb'))
 
 
