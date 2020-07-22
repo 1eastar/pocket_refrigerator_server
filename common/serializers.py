@@ -63,3 +63,4 @@ class ReportSerializer(serializers.ModelSerializer):
     class Meta:
         model = models.Report
         fields = ('pk', 'author', 'recipe', 'report_type', 'report_object_id', 'report_category', 'content', 'created_at', 'updated_at')
+

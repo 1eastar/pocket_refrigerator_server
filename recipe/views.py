@@ -17,9 +17,10 @@ from refri.models import BasicItem, Item
 
 # Create your views here.
 
-authentication = TokenAuthentication
-if getattr(settings, 'DEBUG', 'False'):
-    authentication = BasicAuthentication
+# authentication = TokenAuthentication
+# if getattr(settings, 'DEBUG', 'False'):
+#     authentication = BasicAuthentication
+authentication = BasicAuthentication
 
 class RecipeViewSet(viewsets.ModelViewSet):
     authentication_classes = [authentication]

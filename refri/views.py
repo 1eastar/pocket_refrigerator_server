@@ -15,9 +15,10 @@ from . import models, serializers
 
 # Create your views here.
 
-authentication = TokenAuthentication
-if getattr(settings, 'DEBUG', 'False'):
-    authentication = BasicAuthentication
+# authentication = TokenAuthentication
+# if getattr(settings, 'DEBUG', 'False'):
+#     authentication = BasicAuthentication
+authentication = BasicAuthentication
 
 class RefrigeratorDetailView(APIView):  # serializer source : owner
     authentication_classes = [authentication]
