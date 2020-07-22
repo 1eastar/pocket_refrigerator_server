@@ -56,10 +56,12 @@ def signup(request):
     """
     회원가입
     data = {
-        username: string,
         email: string,
         pw: string,
         pw_confirm: string,
+        nickname: string,
+        gender: number, // 0: man, 1: woman
+        birth: string,
     }
     response = {
         success: boolean,
@@ -68,36 +70,51 @@ def signup(request):
         user: object,
     }
     """
-    username = request.data['username']
-    user_for_check = User.objects.filter(username=username)
-    if user_for_check > 0:
-        return Response({
-            'success': 'false',
-            'msg': '이미 사용 중인 아이디입니다'
-        })
     email = request.data['email']
+    # user_for_check = User.objects.filter(username=email)
+    # if len(user_for_check) > 0:
+    #     return Response({
+    #         'success': 'false',
+    #         'msg': '이미 사용 중인 아이디입니다'
+    #     })
     user_for_check = User.objects.filter(email=email)
-    if user_for_check > 0:
+    if len(user_for_check) > 0:
         return Response({
-            'success': 'false',
+            'success': False,
             'msg': '이미 사용 중인 이메일입니다'
         })
+
+    nickname = request.data['nickname']
+    nickname_check = models.Userdata.objects.filter(nickname=nickname)
+    if len(nickname_check) > 0:
+        return Response({
+            'success': False,
+            'msg': '이미 사용 중인 닉네임입니다'
+        })
+
     pw = request.data['pw']
     pw_confirm = request.data['pw_confirm']
+    gender = request.data['gender']
+    birth = request.data['birth']
     if pw == pw_confirm:
-        user = User.objects.create_user(username=username, email=email, password=pw)
+        user = User.objects.create_user(username=email, email=email, password=pw)
         auth.login(request, user)      # 무슨 역할? 백엔드 내부 역할?
         token = Token.objects.get(user=request.user).key
         serializer = serializers.AuthSerializer(user)
         return Response({
-            'success': 'true',
+            'success': True,
             'msg': '회원가입에 성공하였습니다',
             'token': token,
             'user': serializer.data
         }, status=status.HTTP_201_CREATED)
+    else:
+        return Response({
+            'success': False,
+            'msg': '비밀번호가 일치하지 않습니다',
+        }, status=status.HTTP_400_BAD_REQUEST)
 
     return Response({
-            'success': 'false',
+            'success': False,
             'msg': '회원가입에 실패하였습니다',
         }, status=status.HTTP_400_BAD_REQUEST)
 
@@ -212,3 +229,16 @@ class BarcodeViewSet(viewsets.ModelViewSet):
     queryset = models.Barcode.objects.all()
     serializer_class = serializers.BarcodeSerializer
 
+
+
+@api_view(http_method_names=['GET'])
+@permission_classes([IsAuthenticated])
+@authentication_classes([authentication])
+def barcode_data(request):
+    """
+    data = {
+        barcode: string,
+    }
+    """
+    barcode = request.GET.get('barcode')
+    return Response({}, status=status.HTTP_200_OK)

@@ -1,8 +1,0 @@
-- pagination
-- searching, filtering
-- imagefields, filefields load_to setting
-
-
-
-만든 사람이 몇 인분 레시피인지 입력해야함.
-서버에는 1인분 기준으로 저장.

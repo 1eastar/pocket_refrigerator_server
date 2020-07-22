@@ -42,6 +42,9 @@ class Honor(models.Model):
 class Userdata(models.Model):
     nickname = models.CharField(max_length=10, blank=True)          # default = username 설정 어떻게?
     report_num = models.IntegerField(default=0)
+    gender = models.IntegerField(default=0)
+    birth = models.CharField(max_length=4, default='0000')
+    icon = models.ForeignKey(Icon, on_delete=models.CASCADE)
 
     user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, blank=False)
     # recipe = models.ForeignKey(Recipe, on_delete=models.CASCADE)

@@ -30,6 +30,7 @@ class Item(models.Model):
     category = models.CharField(default='', max_length=20)
     user_comment = models.TextField()
     amount = models.IntegerField(default=0) # 개수
+    unit = models.CharField(max_length=1, default='개')
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     create_type = models.IntegerField(default=-1) # 0: 바코드, 1: 직접입력
