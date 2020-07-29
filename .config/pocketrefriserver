@@ -14,4 +14,11 @@ server {
         uwsgi_pass     unix:/tmp/pocketrefriserver.sock;
     }
 
+    location /static/ {
+        alias /srv/pocketrefriserver/staticfiles/;
+    }
+    location /media/ {
+        alias /srv/pocketrefriserver/media/;
+    }
+
 }

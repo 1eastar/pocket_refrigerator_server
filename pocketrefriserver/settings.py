@@ -29,6 +29,8 @@ SECRET_KEY = secrets['SECRET_KEY']
 DEBUG = False
 
 ALLOWED_HOSTS = secrets['ALLOWED_HOSTS']
+if DEBUG:
+    ALLOWED_HOSTS = []
 
 
 # Application definition
@@ -60,6 +62,10 @@ INSTALLED_APPS = [
     'allauth.socialaccount.providers.naver',    # 어떤 소셜 서비스를 사용하는지 추가
     'rest_auth.registration',
 ]
+
+CORS_ORIGIN_ALLOW_ALL = True
+CORS_ALLOW_CREDENTIALS = True
+CORS_ORIGIN_WHITELIST = secrets['CORS_ORIGIN_WHITELIST']
 
 SITE_ID = 1
 # REST_USE_JWT = True
