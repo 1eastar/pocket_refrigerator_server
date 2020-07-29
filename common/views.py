@@ -79,7 +79,7 @@ def signup(request):
     #         'success': 'false',
     #         'msg': '이미 사용 중인 아이디입니다'
     #     })
-    user_for_check = get_object_or_404(User, email=email)
+    user_for_check = User.objects.get(email=email)
     if len(user_for_check) > 0:
         return Response({
             'success': False,
@@ -87,7 +87,7 @@ def signup(request):
         })
 
     nickname = request.data['nickname']
-    nickname_check = get_object_or_404(models.Userdata, nickname=nickname)
+    nickname_check = models.Userdata.objects.get(nickname=nickname)
     if len(nickname_check) > 0:
         return Response({
             'success': False,
@@ -105,7 +105,7 @@ def signup(request):
     # auth.login(request, user)      # 무슨 역할? 백엔드 내부 역할?
     token = Token.objects.get(user=request.user).key
     userdata = models.Userdata.create(nickname=nickname, gender=gender, birth=birth, user=user, icon=icon)
-    
+
 # userdata serializer를 authserializer에 넣어야 댐
     serializer = serializers.AuthSerializer(user)
     return Response({
