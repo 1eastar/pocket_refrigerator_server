@@ -62,5 +62,10 @@ class ReportSerializer(serializers.ModelSerializer):
     author = AuthSerializer(many=False, read_only=True)
     class Meta:
         model = models.Report
-        fields = ('pk', 'author', 'recipe', 'report_type', 'report_object_id', 'report_category', 'content', 'created_at', 'updated_at')
+        fields = '__all__'
 
+
+class FoodSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = models.Food
+        fields = '__all__'

@@ -15,14 +15,15 @@ from rest_framework.views import APIView
 # from rest_framework_jwt.authentication import JSONWebTokenAuthentication
 
 from . import models, serializers
+from recipe.models import Recipe, Comment
 
 # Create your views here.
 
-# authentication = TokenAuthentication
-# if getattr(settings, 'DEBUG', 'False'):
-#     authentication = BasicAuthentication
+authentication = TokenAuthentication
+if getattr(settings, 'DEBUG', 'False'):
+    authentication = BasicAuthentication
 
-authentication = BasicAuthentication
+# authentication = BasicAuthentication
 
 @api_view(http_method_names=['POST'])
 @permission_classes([IsAuthenticated])
@@ -39,14 +40,14 @@ def check_user_auth(request):
     }
     """
     user = request.user
-    input_pw = request.data['password']
+    input_pw = request.data['data']['password']
     if check_password(input_pw, user.password): 
         return Response({
-            'success': 'true',
+            'success': True,
             'msg': '인증에 성공했습니다'
         }, status=status.HTTP_200_OK)
     return Response({
-        'success': 'false',
+        'success': False,
         'msg': '인증에 실패했습니다'
     }, status=status.HTTP_400_BAD_REQUEST)
 
@@ -72,42 +73,40 @@ def signup(request):
         user: object,
     }
     """
-    email = request.data['email']
+    email = request.data['data']['email']
     # user_for_check = User.objects.filter(username=email)
     # if len(user_for_check) > 0:
     #     return Response({
     #         'success': 'false',
     #         'msg': '이미 사용 중인 아이디입니다'
     #     })
-    user_for_check = User.objects.get(email=email)
+    user_for_check = User.objects.filter(email=email)
     if len(user_for_check) > 0:
         return Response({
             'success': False,
             'msg': '이미 사용 중인 이메일입니다'
         })
 
-    nickname = request.data['nickname']
-    nickname_check = models.Userdata.objects.get(nickname=nickname)
+    nickname = request.data['data']['nickname']
+    nickname_check = models.Userdata.objects.filter(nickname=nickname)
     if len(nickname_check) > 0:
         return Response({
             'success': False,
             'msg': '이미 사용 중인 닉네임입니다'
         })
-
-    pw = request.data['pw']
-    gender = request.data['gender']
-    birth = request.data['birth']
-    icon_id = request.data['icon']
-
-    icon = get_object_or_404(models.Icon, pk=icon_id)
     
+    pw = request.data['data']['pw']
+    gender = request.data['data']['gender']
+    birth = request.data['data']['birth']
+    icon_id = request.data['data']['icon']
+    icon = get_object_or_404(models.Icon, id=icon_id)
     user = User.objects.create_user(username=email, email=email, password=pw)
-    # auth.login(request, user)      # 무슨 역할? 백엔드 내부 역할?
-    token = Token.objects.get(user=request.user).key
-    userdata = models.Userdata.create(nickname=nickname, gender=gender, birth=birth, user=user, icon=icon)
+    # auth.login(request, user) 
+    token = Token.objects.get(user=user).key
+    userdata = models.Userdata.objects.create(nickname=nickname, gender=gender, birth=birth, user=user, icon=icon)
 
 # userdata serializer를 authserializer에 넣어야 댐
-    serializer = serializers.AuthSerializer(user)
+    serializer = serializers.UserdataSerializer(userdata)
     return Response({
         'success': True,
         'msg': '회원가입에 성공하였습니다',
@@ -133,26 +132,29 @@ def signin(request):
         user: object,
     }
     """
-    user_id = request.data['user_id']
-    user_pw = request.data['user_pw']
-    user_unchecked = User.objects.get(username=user_id)
+    user_id = request.data['data']['user_id']
+    user_pw = request.data['data']['user_pw']
+    user_unchecked = get_object_or_404(User, username=user_id)
+
     if user_unchecked is None:
         return Response({
-            'success': 'false',
+            'success': False,
             'msg': '존재하지 않는 아이디입니다'
         }, status=status.HTTP_400_BAD_REQUEST)
-    if check_password(user_unchecked, user_pw):
+
+    if user_unchecked.check_password(user_pw):
         user_checked = user_unchecked
         token = Token.objects.get(user=user_checked)
-        serializer = serializers.AuthSerializer(user_checked)
+        userdata = models.Userdata.objects.get(user=user_checked)
+        serializer = serializers.UserdataSerializer(userdata)
         return Response({
-            'success': 'false',
+            'success': False,
             'msg': '로그인 되었습니다.',
             'token': token.key,
             'user': serializer.data
         }, status=status.HTTP_200_OK)
     return Response({
-        'success': 'false',
+        'success': False,
         'msg': '비밀번호가 틀렸습니다'
     }, status=status.HTTP_400_BAD_REQUEST)
 
@@ -229,13 +231,112 @@ class BarcodeViewSet(viewsets.ModelViewSet):
 
 
 @api_view(http_method_names=['GET'])
-@permission_classes([IsAuthenticated])
-@authentication_classes([authentication])
-def barcode_data(request):
+@permission_classes([AllowAny])
+@authentication_classes([])
+def get_barcode_data(request):
     """
     data = {
         barcode: string,
     }
     """
     barcode = request.GET.get('barcode')
-    return Response({}, status=status.HTTP_200_OK)
+    food_data = get_object_or_404(models.Food, BAR_CD=barcode)
+    serializer = serializers.FoodSerializer(food_data)
+    return Response({
+        'success': True,
+        'msg': '데이터 불러오기에 성공했습니다.',
+        'food': serializer.data
+    }, status=status.HTTP_200_OK)
+
+######### DB에 없는 바코드 정보 저장 api ###########
+############# 악용 우려가 있어 보류 ###############
+# @api_view(http_method_names=['POST'])
+# @permission_classes([IsAuthenticated])
+# @authentication_classes([authentication])
+# def set_barcode_data(request):
+#     """
+#     data = {
+#         BAR_CD: string,
+#         PRDLST_DCNM?: string,
+#         PRDLST_NM?: string,
+#         BSSH_NM?: string,
+#         PRMS_DT?: string,
+#         CLSBIZ_DT?: string,
+#         INDUTY_NM?: string,
+#         SITE_ADDR?: string,
+#         POG_DAYCNT?: string,
+#         END_DT?: string,
+#         PRDLST_REPORT_NO?: string,
+#     }
+#     """
+    
+#     return Response({
+#         'success': True,
+#         'msg': '데이터를 저장했습니다.',
+#         'food': serializer.data
+#     }, status=status.HTTP_200_OK)
+
+
+# class ReportView(APIView):
+#     authentication_classes = [authentication]
+#     permission_classes = [IsAuthenticated]
+
+#     def get(self, request, format=None):
+
+#         return
+
+@api_view(http_method_names=['GET'])
+@permission_classes([AllowAny])
+@authentication_classes([])
+def report(request):
+    """
+    data = {
+        author_id: number,
+        report_type: number,
+        report_category: number,
+        content: string,
+
+        user_id?: number,
+        recipe_id?: number,
+        comment_id?: number,
+    }
+    """
+    author_id = request.GET['author_id']
+    report_type = int(request.GET['report_type'])
+    report_category = request.GET['report_category']
+    content = request.GET['content']
+    print(author_id, report_type, report_category, content)
+    if report_type == 0:
+        user = get_object_or_404(User, pk=request.GET['user_id'])
+        userdata = models.Userdata.objects.get(user=user)
+        userdata.report_num += 1
+        userdata.save()
+        report = models.Report.objects.create(author_id=author_id, report_type=report_type, report_category=report_category, content=content, user=user)
+        serializer = serializers.ReportSerializer(report)
+        return Response({
+            'success': True,
+            'msg': '해당 유저를 신고하였습니다',
+            'report': serializer.data,
+        }, status=status.HTTP_200_OK)
+    if report_type == 1:
+        recipe = get_object_or_404(Recipe, pk=request.GET['recipe_id'])
+        recipe.report_num += 1
+        recipe.save()
+        report = models.Report.objects.create(author_id=author_id, report_type=report_type, report_category=report_category, content=content, recipe=recipe)
+        serializer = serializers.ReportSerializer(report)
+        return Response({
+            'success': True,
+            'msg': '해당 레시피를 신고하였습니다',
+            'report': serializer.data,
+        }, status=status.HTTP_200_OK)
+    if report_type == 2:
+        comment = get_object_or_404(Comment, pk=request.GET['comment_id'])
+        comment.report_num += 1
+        comment.save()
+        report = models.Report.objects.create(author_id=author_id, report_type=report_type, report_category=report_category, content=content, comment=comment)
+        serializer = serializers.ReportSerializer(report)
+        return Response({
+            'success': True,
+            'msg': '해당 댓글을 신고하였습니다',
+            'report': serializer.data,
+        }, status=status.HTTP_200_OK)

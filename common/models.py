@@ -85,15 +85,39 @@ class Barcode(models.Model):
 
 
 class Report(models.Model):
+    author_id = models.IntegerField(default=-1)
     report_type = models.IntegerField(default=-1)    # 0: user, 1: recipe, 2: comment
-    report_object_id = models.IntegerField(default=-1)
+    # report_object_id = models.IntegerField(default=-1, null=True, blank=True)
     report_category = models.IntegerField(default=-1)
     content = models.TextField(max_length=1000)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
-    recipe = models.ForeignKey('recipe.Recipe', on_delete=models.PROTECT, null=True)
-    author = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT)
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, null=True, blank=True)
+    recipe = models.ForeignKey('recipe.Recipe', on_delete=models.PROTECT, null=True, blank=True)
+    comment = models.ForeignKey('recipe.Comment', on_delete=models.PROTECT, null=True, blank=True)
 
     def __str__(self):
-        return "Recipe #{}".format(self.recipe.id)
+        if self.report_type == 0:
+            return "User #{}".format(self.user.id)
+        if self.report_type == 1:
+            return "Recipe #{}".format(self.recipe.id)
+        if self.report_type == 2:
+            return "Comment #{}".format(self.comment.id)
+
+
+class Food(models.Model):
+    BAR_CD = models.CharField(default='0000000000000', max_length=50)
+    PRDLST_DCNM = models.CharField(default='category', max_length=50, null=True, blank=True)
+    PRDLST_NM = models.CharField(default='name', max_length=50, null=True, blank=True)
+    BSSH_NM = models.CharField(default='corp', max_length=50, null=True, blank=True)
+    PRMS_DT = models.CharField(default='make start date', max_length=50, null=True, blank=True)
+    CLSBIZ_DT = models.CharField(default='', max_length=50, null=True, blank=True)
+    INDUTY_NM = models.CharField(default='corp category', max_length=50, null=True, blank=True)
+    SITE_ADDR = models.CharField(default='address', max_length=50, null=True, blank=True)
+    POG_DAYCNT = models.CharField(default='shelf life', max_length=50, null=True, blank=True)
+    END_DT = models.CharField(default='make finish date', max_length=50, null=True, blank=True)
+    PRDLST_REPORT_NO = models.CharField(default='report number', max_length=50, null=True, blank=True)
+
+    def __str__(self):
+        return self.PRDLST_NM

@@ -14,6 +14,9 @@ urlpatterns = [
     path('', include(router.urls)),
     path('checkUserAuth/', views.check_user_auth),
     path('signup/', views.signup),
-    path('signin', views.signin),
+    path('signin/', views.signin),
     path('userDetail/', views.UserDetailView.as_view()),
+    path('getbarcode/', views.get_barcode_data),
+    # path('setbarcode/', views.set_barcode_data),
+    path('report/', views.report),
 ]
