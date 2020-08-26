@@ -3,6 +3,7 @@ from django.contrib.auth.models import User
 from django.http import HttpResponse, Http404
 from django.apps import apps
 from django.conf import settings
+from django.db.models import Q
 
 from rest_framework import status, viewsets, renderers
 from rest_framework.response import Response
@@ -14,6 +15,7 @@ from rest_framework.views import APIView
 
 from . import models, serializers
 from refri.models import BasicItem, Item
+from common.serializers import ReportSerializer
 
 # Create your views here.
 
@@ -41,64 +43,66 @@ class RecipeViewSet(viewsets.ModelViewSet):
 
     @action(detail=True, methods=['GET'])
     def like(self, request, pk):
+        """
+        Can not cancel Like
+        """
         user = self.request.user
-        like_instance = models.Like.objects.get(author=user)
-        if like_instance.exists():
+        recipe = self.get_object()
+        like_instance = models.Like.objects.filter(Q(author=user) & Q(recipe=recipe))
+        if len(like_instance) > 0:
             return Response({
                 "success": False,
                 "msg": "이미 좋아요를 누르셨습니다."
             }, status=status.HTTP_406_NOT_ACCEPTABLE)
-        recipe = self.get_object()
         recipe.like_num += 1
         recipe.save()
         newLike = models.Like.objects.create(author=user, recipe=recipe)
         recipe_serializer = serializers.RecipeSerializer(recipe)
         return Response(recipe_serializer.data, status=status.HTTP_200_OK)
     
-    @action(detail=True, methods=['GET'])
-    def cancel_like(self, request, pk):
-        """
-        좋아요 안 눌렀을 때는 좋아요 기능을 함.
-        * 없앨까 고민
-        """
-        user = self.request.user
-        like_instance = models.Like.objects.get(author=user)
-        if not like_instance.exists():
-            recipe = self.get_object()
-            recipe.like_num += 1
-            recipe.save()
-            newLike = models.Like.objects.create(author=user, recipe=recipe)
-            recipe_serializer = serializers.RecipeSerializer(recipe)
-            return Response(recipe_serializer.data, status=status.HTTP_200_OK)
-        recipe = self.get_object()
-        if recipe.like_num > 1:
-            recipe.like_num -= 1
-            recipe.save()
-        like = models.Like.objects.get(recipe=recipe, author=user)
-        like.delete()
+    # @action(detail=True, methods=['GET'])
+    # def cancel_like(self, request, pk):
+    #     """
+    #     좋아요 안 눌렀을 때는 좋아요 기능을 함.
+    #     * 없앨까 고민
+    #     """
+    #     user = self.request.user
+    #     like_instance = models.Like.objects.filter(author=user)
+    #     if not like_instance.exists():
+    #         recipe = self.get_object()
+    #         recipe.like_num += 1
+    #         recipe.save()
+    #         newLike = models.Like.objects.create(author=user, recipe=recipe)
+    #         recipe_serializer = serializers.RecipeSerializer(recipe)
+    #         return Response(recipe_serializer.data, status=status.HTTP_200_OK)
+    #     recipe = self.get_object()
+    #     if recipe.like_num > 1:
+    #         recipe.like_num -= 1
+    #         recipe.save()
+    #     like = models.Like.objects.get(recipe=recipe, author=user)
+    #     like.delete()
 
-        recipe_serializer = serializers.RecipeSerializer(recipe)
-        return Response(recipe_serializer.data, status=status.HTTP_200_OK)
+    #     recipe_serializer = serializers.RecipeSerializer(recipe)
+    #     return Response(recipe_serializer.data, status=status.HTTP_200_OK)
 
     @action(detail=True, methods=['POST'])
     def report(self, request, pk):
         """
         data = {
-            type: number,
             category: number,
             content: string,
-            object_id: number,
         }
         """
         recipe = self.get_object()
         recipe.report_num += 1
         recipe.save()
         Report = apps.get_model('common', 'Report')
-        newReport = Report.objects.create(report_type=self.request.data['type'], report_category=self.request.data['category'], content=self.request.data['content'], author=self.request.user, report_object_id=self.request.data['object_id'])
+        newReport = Report.objects.create(report_type=1, report_category=self.request.data['data']['category'], content=self.request.data['data']['content'], author_id=self.request.user.id, recipe=recipe)
         
-        report_serializer = serializers.RecipeReportSerializer(newReport)
+        report_serializer = ReportSerializer(newReport)
         return Response(report_serializer.data, status=status.HTTP_200_OK)
 
+    # do not use
     @action(detail=True, methods=['GET'])
     def visit(self, request, pk):
         recipe = self.get_object()
@@ -107,52 +111,52 @@ class RecipeViewSet(viewsets.ModelViewSet):
         serializer = serializers.RecipeSerializer(recipe)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
-class RecipeItemListView(APIView):
-    authentication_classes = [authentication]
-    permission_classes = [IsAuthenticated]
+# class RecipeItemListView(APIView):
+#     authentication_classes = [authentication]
+#     permission_classes = [IsAuthenticated]
 
-    def get(self, request, format=None):
-        """
-        get url parameters = {
-            recipe_id: number,
-        }
-        """
-        user = self.request.user
-        recipe = models.Recipe.objects.get(pk=self.request.GET.get('recipe_id'))
-        recipe_items = models.RecipeItem.objects.filter(recipe=recipe)
-        # recipe_items = models.RecipeItem.objects.all()
-        serializer = serializers.RecipeItemSerializer(recipe_items, many=True)
-        return Response(serializer.data, status=status.HTTP_200_OK)
+#     def get(self, request, format=None):
+#         """
+#         get url parameters = {
+#             recipe_id: number,
+#         }
+#         """
+#         user = self.request.user
+#         recipe = models.Recipe.objects.get(pk=self.request.GET.get('recipe_id'))
+#         recipe_items = models.RecipeItem.objects.filter(recipe=recipe)
+#         # recipe_items = models.RecipeItem.objects.all()
+#         serializer = serializers.RecipeItemSerializer(recipe_items, many=True)
+#         return Response(serializer.data, status=status.HTTP_200_OK)
 
-    def post(self, request, format=None):
-        """
-        data = {
-            amount: number,
-            recipe_id: number,
-            item_id?: number,
-            basic_item_id?: number,
-        }
-        """
-        amount = request.data['amount']
-        recipe_id = request.data['recipe_id']
-        item_id = request.data['item_id']
-        basic_item_id = request.data['basic_item_id']
-        if not item_id and not basic_item_id:
-            return Response({
-                "success": False,
-                "msg": "item 또는 basic item들 중 하나를 선택해야합니다."
-            })
+#     def post(self, request, format=None):
+#         """
+#         data = {
+#             amount: number,
+#             recipe_id: number,
+#             item_id?: number,
+#             basic_item_id?: number,
+#         }
+#         """
+#         amount = request.data['amount']
+#         recipe_id = request.data['recipe_id']
+#         item_id = request.data['item_id']
+#         basic_item_id = request.data['basic_item_id']
+#         if not item_id and not basic_item_id:
+#             return Response({
+#                 "success": False,
+#                 "msg": "item 또는 basic item들 중 하나를 선택해야합니다."
+#             })
 
-        recipe = models.Recipe.objects.get(pk=recipe_id)
-        if not item_id:
-            basic_item = BasicItem.objects.get(pk=basic_item_id)
-            recipe_item = models.RecipeItem.objects.create(amount=amount, recipe=recipe, basic_item=basic_item)
-        else:
-            item = Item.objects.get(pk=item_id)
-            recipe_item = models.RecipeItem.objects.create(amount=amount, recipe=recipe, item=item)
+#         recipe = models.Recipe.objects.get(pk=recipe_id)
+#         if not item_id:
+#             basic_item = BasicItem.objects.get(pk=basic_item_id)
+#             recipe_item = models.RecipeItem.objects.create(amount=amount, recipe=recipe, basic_item=basic_item)
+#         else:
+#             item = Item.objects.get(pk=item_id)
+#             recipe_item = models.RecipeItem.objects.create(amount=amount, recipe=recipe, item=item)
 
-        serializer = serializers.RecipeItemSerializer(recipe_item)
-        return Response(serializer.data, status=status.HTTP_201_CREATED)
+#         serializer = serializers.RecipeItemSerializer(recipe_item)
+#         return Response(serializer.data, status=status.HTTP_201_CREATED)
 
 class RecipeItemDetailView(APIView):
     authentication_classes = [authentication]
@@ -294,19 +298,17 @@ class CommentViewSet(viewsets.ModelViewSet):
     def report(self, request, pk):
         """
         data = {
-            type: number,
             category: number,
             content: string,
-            object_id: number,
         }
         """
         comment = self.get_object()
         comment.report_num += 1
         comment.save()
-        newReport = models.Comment.objects.create(report_type=self.request.data['type'], report_category=self.request.data['category'], content=self.request.data['content'], author=self.request.user, report_object_id=self.request.data['object_id'])
+        Report = apps.get_model('common', 'Report')
+        newReport = Report.objects.create(report_type=2, report_category=self.request.data['data']['category'], content=self.request.data['data']['content'], author_id=self.request.user.id, comment=comment)
         
         comment_serializer = serializers.CommentSerializer(comment)
         comment_serializer.save(author=self.request.user)
         return Response(comment_serializer.data, status=status.HTTP_200_OK)
-
 
