@@ -29,8 +29,8 @@ SECRET_KEY = secrets['SECRET_KEY']
 DEBUG = True
 
 ALLOWED_HOSTS = secrets['ALLOWED_HOSTS']
-# if DEBUG:
-#     ALLOWED_HOSTS = []
+if DEBUG:
+    ALLOWED_HOSTS = []
 
 
 # Application definition

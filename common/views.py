@@ -148,7 +148,7 @@ def signin(request):
         userdata = models.Userdata.objects.get(user=user_checked)
         serializer = serializers.UserdataSerializer(userdata)
         return Response({
-            'success': False,
+            'success': True,
             'msg': '로그인 되었습니다.',
             'token': token.key,
             'user': serializer.data
