@@ -15,9 +15,9 @@ from common.models import Icon
 
 # Create your views here.
 
-# authentication = TokenAuthentication
-# if getattr(settings, 'DEBUG', 'False'):
-#     authentication = BasicAuthentication
+authentication = TokenAuthentication
+if getattr(settings, 'DEBUG', 'False'):
+    authentication = BasicAuthentication
 authentication = BasicAuthentication
 
 class RefrigeratorDetailView(APIView):  # serializer source : owner
