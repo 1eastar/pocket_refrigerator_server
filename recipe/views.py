@@ -21,9 +21,8 @@ from common.serializers import ReportSerializer
 # Create your views here.
 
 authentication = TokenAuthentication
-if getattr(settings, 'DEBUG', 'False'):
+if getattr(settings, 'DEBUG'):
     authentication = BasicAuthentication
-authentication = BasicAuthentication
 
 class RecipeViewSet(viewsets.ModelViewSet):
     authentication_classes = [authentication]

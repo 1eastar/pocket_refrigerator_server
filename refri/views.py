@@ -18,7 +18,6 @@ from common.models import Icon
 authentication = TokenAuthentication
 if getattr(settings, 'DEBUG', 'False'):
     authentication = BasicAuthentication
-authentication = BasicAuthentication
 
 class RefrigeratorDetailView(APIView):  # serializer source : owner
     authentication_classes = [authentication]
