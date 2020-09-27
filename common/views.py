@@ -133,8 +133,8 @@ def signup(request):
     # auth.login(request, user) 
     token = get_object_or_404(Token, user=user).key
 
-# userdata serializer를 authserializer에 넣어야 댐
-    serializer = serializers.AuthSerializer(user)
+# userdata serializer를 UserSerializer 넣어야 댐
+    serializer = serializers.UserSerializer(user)
     return Response({
         'success': True,
         'msg': '회원가입에 성공하였습니다',
@@ -173,7 +173,7 @@ def signin(request):
     if user_unchecked.check_password(user_pw):
         user_checked = user_unchecked
         token = get_object_or_404(Token, user=user_checked)
-        serializer = serializers.AuthSerializer(user_unchecked)
+        serializer = serializers.UserSerializer(user_unchecked)
         return Response({
             'success': True,
             'msg': '로그인 되었습니다.',
@@ -196,7 +196,7 @@ class UserDetailView(APIView):
         """
         if self.request.user.is_authenticated:
             user = request.user
-            serializer = serializers.AuthSerializer(user)
+            serializer = serializers.UserSerializer(user)
             return Response(serializer.data, status=status.HTTP_200_OK)
         else:
             return Response({
@@ -215,7 +215,7 @@ class UserDetailView(APIView):
         }
         """
         user = self.request.user
-        serializer = serializers.AuthSerializer(user, data=request.data, partial=True)
+        serializer = serializers.UserSerializer(user, data=request.data, partial=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
     def delete(self, request, format=None):
@@ -322,7 +322,6 @@ def report(request):
         report_type: number,
         report_category: number,
         content: string,
-
         user_id?: number,
         recipe_id?: number,
         comment_id?: number,

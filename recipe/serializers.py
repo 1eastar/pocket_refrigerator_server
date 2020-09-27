@@ -58,9 +58,9 @@ class CommentSerializer(serializers.ModelSerializer):
         # fields = ('author_data', 'content', 'report_num', 'recipe', 'created_at', 'updated_at')
         fields = '__all__'
     def get_author(self, obj):
-        from common.serializers import AuthSerializer
+        from common.serializers import UserSerializer
         user = self.get_author(obj)
-        return AuthSerializer(user, many=False, read_only=True).data
+        return UserSerializer(user, many=False, read_only=True).data
 
 class TagSerializer(serializers.ModelSerializer):
     class Meta:

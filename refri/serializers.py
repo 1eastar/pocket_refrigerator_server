@@ -4,7 +4,7 @@ from rest_framework.serializers import ReadOnlyField
 from django.conf import settings
 
 from . import models
-from common.serializers import IconSerializer, AuthSerializer
+from common.serializers import IconSerializer, UserSerializer
 
 
 class ItemSerializer(serializers.ModelSerializer):
@@ -51,7 +51,7 @@ class MemoSerializer(serializers.ModelSerializer):
 
 
 class RefrigeratorSerializer(serializers.ModelSerializer):
-    owner = AuthSerializer(many=False, read_only=True)
+    owner = UserSerializer(many=False, read_only=True)
     item_set = ItemSerializer(many=True, read_only=True, required=False)
     basic_item_set = BasicItemSerializer(many=True, read_only=True, required=False)
     memo_set = MemoSerializer(many=True, read_only=True, required=False)

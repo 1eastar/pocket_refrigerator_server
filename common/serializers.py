@@ -17,7 +17,7 @@ class HonorSerializer(serializers.ModelSerializer):
         model = models.Honor
         fields = ('pk', 'name', 'created_at', 'honor_icon')
 
-class AuthSerializer(serializers.ModelSerializer):
+class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = models.User
         exclude = ['password']
@@ -48,7 +48,7 @@ class BarcodeSerializer(serializers.ModelSerializer):
 
 
 class ReportSerializer(serializers.ModelSerializer):
-    author = AuthSerializer(many=False, read_only=True)
+    author = UserSerializer(many=False, read_only=True)
     class Meta:
         model = models.Report
         fields = '__all__'

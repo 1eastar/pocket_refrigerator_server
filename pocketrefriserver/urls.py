@@ -33,8 +33,8 @@ schema_view = get_schema_view(
       contact=openapi.Contact(email="ehdwls6703@gmail.com"),
       license=openapi.License(name="BSD License"),
    ),
-   public=True,
-   permission_classes=(permissions.AllowAny,),
+   public=False,
+   permission_classes=(permissions.IsAdminUser,),
 )
 
 urlpatterns = [
@@ -45,7 +45,8 @@ urlpatterns = [
     path('refri/', include('refri.urls')),
     path('api-auth/', include('rest_framework.urls')),
     path('api/swagger/', schema_view.with_ui('swagger', cache_timeout=0)),
-    path('users/', include('rest_auth.urls')),  # rest auth 'REST_AUTH_JWT=True' 설정 안 하면 기본 Token 모델 사용 / 모듈 내부에서 기본 토큰 자동 생성해줌(receiver 필요x)
+    # 커스텀 User 모델을 사용하기 때문에 rest_auth 패키지 내부에 있는 User__username 필드 다 없애야함
+    # path('users/', include('rest_auth.urls')),  # rest auth 'REST_AUTH_JWT=True' 설정 안 하면 기본 Token 모델 사용 / 모듈 내부에서 기본 토큰 자동 생성해줌(receiver 필요x)
     path('users/registration/', include('rest_auth.registration.urls')),
 ]
 urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

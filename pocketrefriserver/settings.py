@@ -61,7 +61,7 @@ INSTALLED_APPS = [
     'drf_yasg',
 
     # for auth
-    'rest_auth',
+    # 'rest_auth',
     'django.contrib.sites',
     'allauth',
     'allauth.account',  # 가입한 계정 관리
