@@ -1,23 +1,17 @@
 from django.db import models
 from django.conf import settings
+from django.shortcuts import get_object_or_404
 from django.contrib.postgres.fields import ArrayField
 from django.db.models.signals import post_save
 from django.dispatch import receiver
 from django.apps import apps
+from django.contrib.auth.models import AbstractBaseUser, BaseUserManager, PermissionsMixin
 
 from rest_framework.authtoken.models import Token
 
 import datetime
 
 # Create your models here.
-
-@receiver(post_save, sender=settings.AUTH_USER_MODEL)
-def create_auth_token(sender, instance=None, created=False, **kwargs):
-    if created:
-        Token.objects.create(user=instance)
-        Refrigerator = apps.get_model('refri', 'Refrigerator')
-        Refrigerator.objects.create(user=instance)
-
 
 class Icon(models.Model):
     name = models.CharField(default='', max_length=20)
@@ -27,32 +21,94 @@ class Icon(models.Model):
         return self.name
 
 
+
+class UserManager(BaseUserManager):
+    use_in_migrations = True    
+    
+    def create_user(self, email, nickname, password=None, gender=0, birth='2020', icon=0):        
+        if not email:
+            raise ValueError('must have user email')        
+        user = self.model(            
+            email = self.normalize_email(email),            
+            nickname = nickname,
+            gender = gender,
+            birth = birth,
+            # icon = get_object_or_404(Icon, id=icon)
+            icon = icon,
+        )
+        user.set_password(password)  
+        user.save(using=self._db)        
+        return user  
+
+    def create_superuser(self, email, nickname, password, gender=0, birth='2020', icon=0):        
+        user = self.create_user(            
+            email = self.normalize_email(email),            
+            nickname = nickname,            
+            password = password,
+            gender = gender,
+            birth = birth,
+            # icon = get_object_or_404(Icon, id=icon)
+            icon = icon,
+        )        
+        user.is_admin = True        
+        user.is_superuser = True 
+        user.save(using=self._db)        
+        return user 
+
+class User(AbstractBaseUser, PermissionsMixin):
+    email = models.EmailField(        
+        max_length=255,        
+        unique=True,    
+    )
+    nickname = models.CharField(
+        max_length=20,
+        null=False,
+        unique=True
+    )
+    gender = models.IntegerField(default=0)
+    birth = models.CharField(max_length=4, default='0000')
+    # icon = models.ForeignKey(Icon, on_delete=models.CASCADE, blank=True, null=True)
+    icon = models.IntegerField(default=0)
+    report_num = models.IntegerField(default=0)
+    is_active = models.BooleanField(default=True)    
+    is_admin = models.BooleanField(default=False)    
+    is_superuser = models.BooleanField(default=False)    
+    is_staff = models.BooleanField(default=False)     
+    date_joined = models.DateTimeField(auto_now_add=True)     
+    USERNAME_FIELD = 'email'    
+    REQUIRED_FIELDS = ['nickname', 'gender', 'birth', 'icon']
+
+    objects = UserManager()
+
+    def has_perm(self, perm, obj=None):
+        return True
+
+    def has_module_perms(self, app_label):
+        return True
+
+    @property
+    def is_staff(self):
+        return self.is_admin
+
+
+@receiver(post_save, sender=User)
+def create_auth_token(sender, instance=None, created=False, **kwargs):
+    if created:
+        Token.objects.create(user=instance)
+        Refrigerator = apps.get_model('refri', 'Refrigerator')
+        Refrigerator.objects.create(user=instance)
+
+
 class Honor(models.Model):
     name = models.CharField(default='', max_length=20)
     created_at = models.DateTimeField(auto_now_add=True)
 
-    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
     recipe = models.ForeignKey('recipe.Recipe', on_delete=models.CASCADE)
     icon = models.ForeignKey(Icon, null=True, on_delete=models.SET_NULL)
 
     def __str__(self):
         return self.name
-
-
-class Userdata(models.Model):
-    nickname = models.CharField(max_length=10, blank=True)          # default = username 설정 어떻게?
-    report_num = models.IntegerField(default=0)
-    gender = models.IntegerField(default=0)
-    birth = models.CharField(max_length=4, default='0000')
-    icon = models.ForeignKey(Icon, on_delete=models.CASCADE)
-
-    user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, blank=False)
-    # recipe = models.ForeignKey(Recipe, on_delete=models.CASCADE)
-    main_honor = models.ForeignKey(Honor, on_delete=models.SET_NULL, null=True, blank=True)
-
-    def __str__(self):
-        return "userdata of #{}".format(self.nickname)
-
 
 class Notice(models.Model):
     post_type = models.IntegerField(default=0)  # 0: 공지사항, 1: FAQ
@@ -93,7 +149,7 @@ class Report(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
-    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, null=True, blank=True)
+    user = models.ForeignKey(User, on_delete=models.PROTECT, null=True, blank=True)
     recipe = models.ForeignKey('recipe.Recipe', on_delete=models.PROTECT, null=True, blank=True)
     comment = models.ForeignKey('recipe.Comment', on_delete=models.PROTECT, null=True, blank=True)
 
@@ -118,6 +174,9 @@ class Food(models.Model):
     POG_DAYCNT = models.CharField(default='shelf life', max_length=50, null=True, blank=True)
     END_DT = models.CharField(default='make finish date', max_length=50, null=True, blank=True)
     PRDLST_REPORT_NO = models.CharField(default='report number', max_length=50, null=True, blank=True)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
 
     def __str__(self):
         return self.PRDLST_NM

@@ -1,5 +1,4 @@
 from django.shortcuts import render, redirect, get_object_or_404
-from django.contrib.auth.models import User
 from django.http import HttpResponse, Http404
 from django.apps import apps
 from django.conf import settings
@@ -11,9 +10,11 @@ from rest_framework.decorators import api_view, authentication_classes, permissi
 from rest_framework.permissions import IsAdminUser, IsAuthenticated, IsAuthenticatedOrReadOnly, AllowAny
 from rest_framework.authentication import TokenAuthentication, BasicAuthentication
 from rest_framework.views import APIView
+from rest_framework.exceptions import ValidationError
 # from rest_framework_jwt.authentication import JSONWebTokenAuthentication
 
 from . import models, serializers
+from recipe.models import Recipe
 from refri.models import BasicItem, Item
 from common.serializers import ReportSerializer
 
@@ -31,9 +32,25 @@ class RecipeViewSet(viewsets.ModelViewSet):
     queryset = models.Recipe.objects.order_by('-updated_at')
     serializer_class = serializers.RecipeSerializer
 
+    def create(self, request, *args, **kwargs):
+        return super().create(request, *args, **kwargs)
+    def get_queryset(self):
+        user = self.request.user
+        return self.queryset.filter(author=user)
+
     def perform_create(self, serializer):
-        # serializer.save()
-        return super().perform_create(serializer)
+        recipe = serializer.save()
+        data = self.request.data
+        if 'content' not in data:
+            raise ValidationError({
+                'content': '비워둘 수 없습니다.'
+            })
+        tags_list = data['tag']
+        for tag in tags_list:
+            t = models.Tag.objects.create(
+                name=tag,
+                recipe=recipe,
+            )
 
     @action(detail=False, methods=['GET'])
     def bestRecipe(self, request):
@@ -41,19 +58,28 @@ class RecipeViewSet(viewsets.ModelViewSet):
         serializer = serializers.RecipeSerializer(recipes, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
+    @action(detail=False, methods=['GET'])
+    def all(self, request):
+        recipes = models.Recipe.objects.all().order_by('-updated_at')
+        serializer = serializers.RecipeSerializer(recipes, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
     @action(detail=True, methods=['GET'])
     def like(self, request, pk):
         """
-        Can not cancel Like
+        이미 좋아요를 누른 유저가 좋아요를 한번 더 누르면 좋아요가 취소됨.
         """
         user = self.request.user
         recipe = self.get_object()
         like_instance = models.Like.objects.filter(Q(author=user) & Q(recipe=recipe))
         if len(like_instance) > 0:
+            like_instance.delete()
+            recipe.like_num -= 1
+            recipe.save()
             return Response({
-                "success": False,
-                "msg": "이미 좋아요를 누르셨습니다."
-            }, status=status.HTTP_406_NOT_ACCEPTABLE)
+                "success": True,
+                "msg": "좋아요를 취소했습니다."
+            }, status=status.HTTP_200_OK)
         recipe.like_num += 1
         recipe.save()
         newLike = models.Like.objects.create(author=user, recipe=recipe)
@@ -92,12 +118,26 @@ class RecipeViewSet(viewsets.ModelViewSet):
             category: number,
             content: string,
         }
+        이미 신고한 레시피는 신고 못하도록 설정. 2회 이상 신고 시 서버에서 reject처리
         """
-        recipe = self.get_object()
+        user = self.request.user
+        Report = apps.get_model('common', 'Report')
+        check_recipe = Report.objects.filter(author_id=user.id)
+        if len(check_recipe) > 0:
+            return Response({
+                "success": False,
+                "msg": "이미 신고한 레시피입니다."
+            }, status=status.HTTP_208_ALREADY_REPORTED)
+        recipe = self.get_object()  # 쿼리로 pk 받아옴
         recipe.report_num += 1
         recipe.save()
-        Report = apps.get_model('common', 'Report')
-        newReport = Report.objects.create(report_type=1, report_category=self.request.data['data']['category'], content=self.request.data['data']['content'], author_id=self.request.user.id, recipe=recipe)
+        newReport = Report.objects.create(
+            report_type=1,
+            report_category=self.request.data['category'],
+            content=self.request.data['content'],
+            author_id=self.request.user.id,
+            recipe=recipe
+        )
         
         report_serializer = ReportSerializer(newReport)
         return Response(report_serializer.data, status=status.HTTP_200_OK)
@@ -105,6 +145,9 @@ class RecipeViewSet(viewsets.ModelViewSet):
     # do not use
     @action(detail=True, methods=['GET'])
     def visit(self, request, pk):
+        """
+        do not use
+        """
         recipe = self.get_object()
         recipe.visit_num += 1
         recipe.save()
@@ -164,7 +207,7 @@ class RecipeItemDetailView(APIView):
 
     def get_object(self, pk):
         try:
-            return models.RecipeItem.objects.get(pk=pk)
+            return get_object_or_404(models.RecipeItem, pk=pk)
         except models.RecipeItem.DoesNotExist:
             raise Http404
 
@@ -212,7 +255,7 @@ class UserRecipeStoreView(APIView):
             recipe_id: number,
         }
         """
-        recipe = models.Recipe.objects.get(id=self.request.data['recipe_id'])
+        recipe = get_object_or_404(models.Recipe, id=self.request.data['recipe_id'])
         user = self.request.user
         newURStore = models.UserRecipeStore.objects.create(user=user, recipe=recipe)
         serializer = serializers.UserRecipeStoreSerializer(newURStore)
@@ -223,8 +266,8 @@ class UserRecipeStoreView(APIView):
         ?recipe_id=number : url parameter
         """
         user = request.user
-        recipe = models.Recipe.objects.get(id=request.GET.get('recipe_id'))
-        URStore = models.UserRecipeStore.objects.get(user=user, recipe=recipe)
+        recipe = get_object_or_404(models.Recipe, id=request.GET.get('recipe_id'))
+        URStore = get_object_or_404(models.UserRecipeStore, user=user, recipe=recipe)
         URStore.delete()
         return Response({
             'success': 'true',
@@ -253,7 +296,7 @@ class UserRecipeHistoryView(APIView):
             recipe_id: number, ?????????????????? post 따로 해야하지 않나?
         }
         """
-        recipe = models.Recipe.objects.get(id=self.request.data['recipe_id'])
+        recipe = get_object_or_404(models.Recipe, id=self.request.data['recipe_id'])
         user = self.request.user
         newUHStore = models.UserRecipeHistory.objects.create(user=user, recipe=recipe)
         serializer = serializers.UserRecipeHistorySerializer(newUHStore)
@@ -264,8 +307,8 @@ class UserRecipeHistoryView(APIView):
         ?recipe_id=number : url parameter
         """
         user = request.user
-        recipe = models.Recipe.objects.get(id=request.GET.get('recipe_id'))
-        UHStore = models.UserRecipeHistory.objects.get(user=user, recipe=recipe)
+        recipe = get_object_or_404(models.Recipe, id=request.GET.get('recipe_id'))
+        UHStore = get_object_or_404(models.UserRecipeHistory, user=user, recipe=recipe)
         UHStore.delete()
         return Response({
             'success': 'true',
@@ -306,7 +349,13 @@ class CommentViewSet(viewsets.ModelViewSet):
         comment.report_num += 1
         comment.save()
         Report = apps.get_model('common', 'Report')
-        newReport = Report.objects.create(report_type=2, report_category=self.request.data['data']['category'], content=self.request.data['data']['content'], author_id=self.request.user.id, comment=comment)
+        newReport = Report.objects.create(
+            report_type=2,
+            report_category=self.request.data['category'],
+            content=self.request.data['content'],
+            author_id=self.request.user.id,
+            comment=comment
+        )
         
         comment_serializer = serializers.CommentSerializer(comment)
         comment_serializer.save(author=self.request.user)

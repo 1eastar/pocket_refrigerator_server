@@ -17,21 +17,10 @@ class HonorSerializer(serializers.ModelSerializer):
         model = models.Honor
         fields = ('pk', 'name', 'created_at', 'honor_icon')
 
-
-class UserdataSerializer(serializers.ModelSerializer):
-    # honors = ReadOnlyField(source='userdata.honor')
-    main_honor = HonorSerializer(many=False, read_only=False, required=False)
-    class Meta:
-        model = models.Userdata
-        fields = ('pk', 'nickname', 'report_num', 'main_honor')
-
 class AuthSerializer(serializers.ModelSerializer):
-    userdata = UserdataSerializer(many=False, read_only=False, required=False)
-    # userdata = ReadOnlyField(source='userdata')
     class Meta:
-        model = settings.AUTH_USER_MODEL
-        fields = ('pk', 'username', 'email', 'userdata')
-
+        model = models.User
+        fields = '__all__'
 
 
 class NoticeSerializer(serializers.ModelSerializer):

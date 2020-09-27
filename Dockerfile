@@ -19,7 +19,7 @@ WORKDIR     /srv/pocketrefriserver
 RUN         pip install -r requirements.txt
 RUN         python manage.py makemigrations
 RUN         python manage.py migrate
-RUN         echo "from django.contrib.auth.models import User; User.objects.filter(username='happyhappy1').delete(); User.objects.create_superuser('happyhappy1', 'ehdwls6703@gmail.com', 'happyhappy1')" | python manage.py shell
+RUN         echo "from common.models import User; User.objects.filter(nickname='happyhappy1').delete(); User.objects.create_superuser('ehdwls@gmail.com', 'happyhappy1', 'happyhappy1')" | python manage.py shell
 WORKDIR     ${PROJECT_DIR}
 
 RUN         cp -f ${PROJECT_DIR}/.config/nginx.conf           /etc/nginx

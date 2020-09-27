@@ -2,7 +2,6 @@ from rest_framework import serializers
 from rest_framework.serializers import ReadOnlyField
 
 from django.conf import settings
-from django.contrib.auth.models import User
 
 from . import models
 # from refri.models import Item, BasicItem
@@ -63,14 +62,19 @@ class CommentSerializer(serializers.ModelSerializer):
         user = self.get_author(obj)
         return AuthSerializer(user, many=False, read_only=True).data
 
+class TagSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = models.Tag
+        fields = '__all__'
+
 
 class RecipeSerializer(serializers.ModelSerializer):
-    # recipe_items = RecipeItemSerializer(many=True, read_only=True)
-    recipe_items = serializers.SerializerMethodField()
+    # recipe_items = serializers.SerializerMethodField()
     comment_set = CommentSerializer(many=True, read_only=True)
+    tag_set = TagSerializer(many=True, read_only=True)
     class Meta:
         model = models.Recipe
-        fields = ('pk', 'author', 'name', 'author_comment', 'recipe_items', 'comment_set', 'like_num', 'comment_num', 'created_at', 'updated_at')
+        fields = ('pk', 'author', 'name', 'content', 'author_comment', 'tag_set', 'comment_set', 'like_num', 'comment_num', 'created_at', 'updated_at')
 
     def get_recipe_items(self, obj):
         recipe_item_query_set = models.RecipeItem.objects.filter(recipe=obj)

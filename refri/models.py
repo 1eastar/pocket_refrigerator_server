@@ -1,11 +1,12 @@
 from django.db import models
 from django.conf import settings
 
+from common.models import User
 
 # Create your models here.
 
 class Refrigerator(models.Model):
-    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
     item_num = models.IntegerField(default=0)
     basic_item_num = models.IntegerField(default=0)
     memo_num = models.IntegerField(default=0)
@@ -28,15 +29,15 @@ class Item(models.Model):
     ddate = models.CharField(max_length=8, default='00.00.00')
     name = models.CharField(default='', max_length=50)
     category = models.CharField(default='', max_length=20)
-    user_comment = models.TextField()
+    user_comment = models.TextField(default='')
     amount = models.IntegerField(default=0) # 개수
-    unit = models.CharField(max_length=1, default='개')
+    unit = models.CharField(max_length=3, default='개')
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     create_type = models.IntegerField(default=-1) # 0: 바코드, 1: 직접입력
     exist = models.BooleanField(default=False)
     
-    author = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    author = models.ForeignKey(User, on_delete=models.CASCADE)
     icon = models.ForeignKey('common.Icon', null=True, on_delete=models.SET_NULL, blank=True)
 
     def __str__(self):
@@ -50,7 +51,7 @@ class BasicItem(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
-    author = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    author = models.ForeignKey(User, on_delete=models.CASCADE)
     icon = models.ForeignKey('common.Icon', null=True, on_delete=models.SET_NULL, blank=True)
 
     def __str__(self):

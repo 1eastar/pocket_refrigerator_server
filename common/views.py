@@ -1,5 +1,4 @@
 from django.shortcuts import render, redirect, get_object_or_404
-from django.contrib.auth.models import User
 from django.contrib import auth
 from django.http import HttpResponse
 from django.contrib.auth.hashers import check_password
@@ -40,7 +39,7 @@ def check_user_auth(request):
     }
     """
     user = request.user
-    input_pw = request.data['data']['password']
+    input_pw = request.data['password']
     if check_password(input_pw, user.password): 
         return Response({
             'success': True,
@@ -55,16 +54,38 @@ def check_user_auth(request):
 @api_view(http_method_names=['POST'])
 @permission_classes([AllowAny])
 @authentication_classes([])
+def verify(request):
+    """
+    data = {
+        email: string,
+    }
+    """
+    email = request.data['email']
+    user_for_check = models.User.objects.filter(email=email)
+    if len(user_for_check) > 0:
+        return Response({
+            'success': False,
+            'msg': '이미 사용 중인 이메일입니다.'
+        })
+    return Response({
+        "success": True,
+        "msg": "사용 가능한 이메일입니다."
+    })
+
+
+@api_view(http_method_names=['POST'])
+@permission_classes([AllowAny])
+@authentication_classes([])
 def signup(request):
     """
     회원가입
     data = {
         email: string,
         pw: string,
-        nickname: string,
         gender: number, // 0: man, 1: woman
         birth: string,
         icon: number,
+        nickname: string,
     }
     response = {
         success: boolean,
@@ -73,40 +94,43 @@ def signup(request):
         user: object,
     }
     """
-    email = request.data['data']['email']
+    email = request.data['email']
     # user_for_check = User.objects.filter(username=email)
     # if len(user_for_check) > 0:
     #     return Response({
     #         'success': 'false',
     #         'msg': '이미 사용 중인 아이디입니다'
     #     })
-    user_for_check = User.objects.filter(email=email)
-    if len(user_for_check) > 0:
-        return Response({
-            'success': False,
-            'msg': '이미 사용 중인 이메일입니다'
-        })
 
-    nickname = request.data['data']['nickname']
-    nickname_check = models.Userdata.objects.filter(nickname=nickname)
+    nickname = request.data['nickname']
+    # nickname_check = models.Userdata.objects.filter(nickname=nickname)
+    nickname_check = models.User.objects.filter(nickname=nickname)
     if len(nickname_check) > 0:
         return Response({
             'success': False,
             'msg': '이미 사용 중인 닉네임입니다'
         })
     
-    pw = request.data['data']['pw']
-    gender = request.data['data']['gender']
-    birth = request.data['data']['birth']
-    icon_id = request.data['data']['icon']
+    pw = request.data['pw']
+    gender = request.data['gender']
+    birth = request.data['birth']
+    icon_id = request.data['icon']
     icon = get_object_or_404(models.Icon, id=icon_id)
-    user = User.objects.create_user(username=email, email=email, password=pw)
+    user = models.User.objects.create_user(
+        username=email,
+        email=email,
+        password=pw,
+        nickname=nickname,
+        gender=gender,
+        birth=birth,
+        user=user,
+        icon=icon
+    )
     # auth.login(request, user) 
-    token = Token.objects.get(user=user).key
-    userdata = models.Userdata.objects.create(nickname=nickname, gender=gender, birth=birth, user=user, icon=icon)
+    token = get_object_or_404(Token, user=user).key
 
 # userdata serializer를 authserializer에 넣어야 댐
-    serializer = serializers.UserdataSerializer(userdata)
+    serializer = serializers.AuthSerializer(user)
     return Response({
         'success': True,
         'msg': '회원가입에 성공하였습니다',
@@ -132,9 +156,9 @@ def signin(request):
         user: object,
     }
     """
-    user_id = request.data['data']['user_id']
-    user_pw = request.data['data']['user_pw']
-    user_unchecked = get_object_or_404(User, username=user_id)
+    user_id = request.data['user_id']
+    user_pw = request.data['user_pw']
+    user_unchecked = get_object_or_404(models.User, username=user_id)
 
     if user_unchecked is None:
         return Response({
@@ -144,9 +168,8 @@ def signin(request):
 
     if user_unchecked.check_password(user_pw):
         user_checked = user_unchecked
-        token = Token.objects.get(user=user_checked)
-        userdata = models.Userdata.objects.get(user=user_checked)
-        serializer = serializers.UserdataSerializer(userdata)
+        token = get_object_or_404(Token, user=user_checked)
+        serializer = serializers.AuthSerializer(user_unchecked)
         return Response({
             'success': True,
             'msg': '로그인 되었습니다.',
@@ -177,27 +200,27 @@ class UserDetailView(APIView):
                 'msg': '로그인을 먼저 해주세요.'
             }, status=status.HTTP_404_NOT_FOUND)
     
-    def put(self, request, format=None):
+    def patch(self, request, format=None):
         """
         update userdata
         data = {
             nickname?: string
-            main_honor?: number,
+            birth?: string // ex)1998
+            gender?: number // 0: man, 1:woman
+            // main_honor?: number, // 일단 생략
         }
         """
-        user = request.user
-        userdata = models.Userdata.objects.get(user=user)
-        new_nickname = request.data['nickname']
-        new_main_honor = request.data['main_honor']
-        if new_nickname is not None:
-            userdata.nickname = new_nickname
-            userdata.save()
-        if new_main_honor is not None:
-            new_honor = models.Honor.objects.get(id=new_main_honor)
-            userdata.main_honor = new_honor
-            userdata.save()
-        serializer = serializers.UserdataSerializer(userdata)
+        user = self.request.user
+        serializer = serializers.AuthSerializer(user, data=request.data, partial=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
+
+    def delete(self, request, format=None):
+        user = self.request.user
+        user.delete()
+        return Response({
+            "success": True,
+            "msg" : '성공적으로 탈퇴했습니다.'
+        })
 
 class AuthInView(APIView):
     authentication_classes = [authentication]
@@ -302,16 +325,21 @@ def report(request):
     }
     """
     author_id = request.GET['author_id']
-    report_type = int(request.GET['report_type'])
+    report_type = int(request.GET['repot_type'])
     report_category = request.GET['report_category']
     content = request.GET['content']
     print(author_id, report_type, report_category, content)
     if report_type == 0:
-        user = get_object_or_404(User, pk=request.GET['user_id'])
-        userdata = models.Userdata.objects.get(user=user)
-        userdata.report_num += 1
-        userdata.save()
-        report = models.Report.objects.create(author_id=author_id, report_type=report_type, report_category=report_category, content=content, user=user)
+        user = get_object_or_404(models.User, pk=request.GET['user_id'])
+        report = models.Report.objects.create(
+            author_id=author_id,
+            report_type=report_type,
+            report_category=report_category,
+            content=content,
+            user=user
+        )
+        user.report_num += 1
+        user.save()
         serializer = serializers.ReportSerializer(report)
         return Response({
             'success': True,
@@ -322,7 +350,13 @@ def report(request):
         recipe = get_object_or_404(Recipe, pk=request.GET['recipe_id'])
         recipe.report_num += 1
         recipe.save()
-        report = models.Report.objects.create(author_id=author_id, report_type=report_type, report_category=report_category, content=content, recipe=recipe)
+        report = models.Report.objects.create(
+            author_id=author_id,
+            report_type=report_type,
+            report_category=report_category,
+            content=content,
+            recipe=recipe
+        )
         serializer = serializers.ReportSerializer(report)
         return Response({
             'success': True,
@@ -333,7 +367,13 @@ def report(request):
         comment = get_object_or_404(Comment, pk=request.GET['comment_id'])
         comment.report_num += 1
         comment.save()
-        report = models.Report.objects.create(author_id=author_id, report_type=report_type, report_category=report_category, content=content, comment=comment)
+        report = models.Report.objects.create(
+            author_id=author_id,
+            report_type=report_type,
+            report_category=report_category,
+            content=content,
+            comment=comment
+        )
         serializer = serializers.ReportSerializer(report)
         return Response({
             'success': True,
