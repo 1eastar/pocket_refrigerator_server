@@ -162,12 +162,12 @@ def signin(request):
     """
     user_id = request.data['user_id']
     user_pw = request.data['user_pw']
-    user_unchecked = get_object_or_404(models.User, email=user_id)
+    user_unchecked = auth.authenticate(email=user_id, password=user_pw)
 
     if user_unchecked is None:
         return Response({
             'success': False,
-            'msg': '존재하지 않는 아이디입니다'
+            'msg': '이메일 또는 비밀번호를 확인해주세요'
         }, status=status.HTTP_400_BAD_REQUEST)
 
     if user_unchecked.check_password(user_pw):
