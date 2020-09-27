@@ -20,7 +20,7 @@ class HonorSerializer(serializers.ModelSerializer):
 class AuthSerializer(serializers.ModelSerializer):
     class Meta:
         model = models.User
-        fields = '__all__'
+        exclude = ['password']
 
 
 class NoticeSerializer(serializers.ModelSerializer):

@@ -11,12 +11,17 @@ from rest_framework.permissions import IsAdminUser, IsAuthenticated, IsAuthentic
 from rest_framework.authentication import TokenAuthentication, BasicAuthentication
 from rest_framework.authtoken.models import Token
 from rest_framework.views import APIView
+from rest_framework.throttling import UserRateThrottle
 # from rest_framework_jwt.authentication import JSONWebTokenAuthentication
 
 from . import models, serializers
 from recipe.models import Recipe, Comment
 
 # Create your views here.
+
+class OncePerDayUserThrottle(UserRateThrottle):
+    rate = '1/day'
+
 
 authentication = TokenAuthentication
 if getattr(settings, 'DEBUG', 'False'):
@@ -117,7 +122,6 @@ def signup(request):
     icon_id = request.data['icon']
     icon = get_object_or_404(models.Icon, id=icon_id)
     user = models.User.objects.create_user(
-        username=email,
         email=email,
         password=pw,
         nickname=nickname,
@@ -158,7 +162,7 @@ def signin(request):
     """
     user_id = request.data['user_id']
     user_pw = request.data['user_pw']
-    user_unchecked = get_object_or_404(models.User, username=user_id)
+    user_unchecked = get_object_or_404(models.User, email=user_id)
 
     if user_unchecked is None:
         return Response({

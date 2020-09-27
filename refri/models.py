@@ -21,7 +21,7 @@ class Refrigerator(models.Model):
     # item = models.ManyToManyField(Item);
 
     def __str__(self):
-        return "{}의 냉장고".format(self.user.username)
+        return "{}의 냉장고".format(self.user.nickname)
 
 class Item(models.Model):
     position = models.IntegerField(default=0) # 냉장, 냉동, 실온
