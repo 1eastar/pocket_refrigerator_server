@@ -25,7 +25,7 @@ class Icon(models.Model):
 class UserManager(BaseUserManager):
     use_in_migrations = True
     
-    def create_user(self, email, nickname, password=None, gender=0, birth='2020', icon=0):        
+    def create_user(self, email, nickname, password=None, gender=0, birth='2020', icon=1):        
         if not email:
             raise ValueError('must have user email')
         icon_instance = get_object_or_404(Icon, id=icon)
@@ -40,7 +40,7 @@ class UserManager(BaseUserManager):
         user.save(using=self._db)        
         return user  
 
-    def create_superuser(self, email, nickname, password, gender=0, birth='2020', icon=0):        
+    def create_superuser(self, email, nickname, password, gender=0, birth='2020', icon=1):        
         user = self.create_user(            
             email = self.normalize_email(email),            
             nickname = nickname,            
