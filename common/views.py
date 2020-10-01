@@ -6,7 +6,7 @@ from django.conf import settings
 
 from rest_framework import status, viewsets
 from rest_framework.response import Response
-from rest_framework.decorators import api_view, authentication_classes, permission_classes, action
+from rest_framework.decorators import api_view, authentication_classes, permission_classes
 from rest_framework.permissions import IsAdminUser, IsAuthenticated, IsAuthenticatedOrReadOnly, AllowAny
 from rest_framework.authentication import TokenAuthentication, BasicAuthentication
 from rest_framework.authtoken.models import Token
@@ -67,7 +67,7 @@ def verify(request):
     """
     email = request.data['email']
     user_for_check = models.User.objects.filter(email=email)
-    if len(user_for_check) > 0:
+    if user_for_check.exists():
         return Response({
             'success': False,
             'msg': '이미 사용 중인 이메일입니다.'
@@ -86,7 +86,7 @@ def signup(request):
     회원가입
     data = {
         email: string,
-        pw: string,
+        password: string,
         gender: number, // 0: man, 1: woman
         birth: string,
         icon: number,
@@ -110,25 +110,23 @@ def signup(request):
     nickname = request.data['nickname']
     # nickname_check = models.Userdata.objects.filter(nickname=nickname)
     nickname_check = models.User.objects.filter(nickname=nickname)
-    if len(nickname_check) > 0:
+    if nickname_check.exists():
         return Response({
             'success': False,
             'msg': '이미 사용 중인 닉네임입니다'
         })
     
-    pw = request.data['pw']
+    password = request.data['password']
     gender = request.data['gender']
     birth = request.data['birth']
     icon_id = request.data['icon']
-    icon = get_object_or_404(models.Icon, id=icon_id)
     user = models.User.objects.create_user(
         email=email,
-        password=pw,
         nickname=nickname,
+        password=password,
         gender=gender,
         birth=birth,
-        user=user,
-        icon=icon
+        icon=icon_id
     )
     # auth.login(request, user) 
     token = get_object_or_404(Token, user=user).key
@@ -150,8 +148,8 @@ def signin(request):
     """
     로그인
     data = {
-        user_id: string,
-        user_pw: string
+        email: string,
+        password: string
     }
     response = {
         success: boolean,
@@ -160,9 +158,9 @@ def signin(request):
         user: object,
     }
     """
-    user_id = request.data['user_id']
-    user_pw = request.data['user_pw']
-    user_unchecked = auth.authenticate(email=user_id, password=user_pw)
+    email = request.data['email']
+    password = request.data['password']
+    user_unchecked = auth.authenticate(email=email, password=password)
 
     if user_unchecked is None:
         return Response({
@@ -170,7 +168,7 @@ def signin(request):
             'msg': '이메일 또는 비밀번호를 확인해주세요'
         }, status=status.HTTP_400_BAD_REQUEST)
 
-    if user_unchecked.check_password(user_pw):
+    if user_unchecked.check_password(password):
         user_checked = user_unchecked
         token = get_object_or_404(Token, user=user_checked)
         serializer = serializers.UserSerializer(user_unchecked)

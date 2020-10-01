@@ -23,18 +23,18 @@ class Icon(models.Model):
 
 
 class UserManager(BaseUserManager):
-    use_in_migrations = True    
+    use_in_migrations = True
     
     def create_user(self, email, nickname, password=None, gender=0, birth='2020', icon=0):        
         if not email:
-            raise ValueError('must have user email')        
-        user = self.model(            
+            raise ValueError('must have user email')
+        icon_instance = get_object_or_404(Icon, id=icon)
+        user = self.model(
             email = self.normalize_email(email),            
             nickname = nickname,
             gender = gender,
             birth = birth,
-            # icon = get_object_or_404(Icon, id=icon)
-            icon = icon,
+            icon = icon_instance,
         )
         user.set_password(password)  
         user.save(using=self._db)        
@@ -47,7 +47,6 @@ class UserManager(BaseUserManager):
             password = password,
             gender = gender,
             birth = birth,
-            # icon = get_object_or_404(Icon, id=icon)
             icon = icon,
         )        
         user.is_admin = True        
@@ -67,8 +66,7 @@ class User(AbstractBaseUser, PermissionsMixin):
     )
     gender = models.IntegerField(default=0)
     birth = models.CharField(max_length=4, default='0000')
-    # icon = models.ForeignKey(Icon, on_delete=models.CASCADE, blank=True, null=True)
-    icon = models.IntegerField(default=0)
+    icon = models.ForeignKey(Icon, on_delete=models.CASCADE, null=True, blank=True)
     report_num = models.IntegerField(default=0)
     is_active = models.BooleanField(default=True)    
     is_admin = models.BooleanField(default=False)    

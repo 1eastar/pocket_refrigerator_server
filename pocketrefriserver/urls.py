@@ -24,6 +24,8 @@ from drf_yasg import openapi
 from rest_framework import permissions
 from rest_framework.authtoken import views
 
+import accounts.views
+
 schema_view = get_schema_view(
    openapi.Info(
       title="pocket_refrigerator",
@@ -39,7 +41,7 @@ schema_view = get_schema_view(
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    path('api-token-auth', views.obtain_auth_token),
+    path('get-token', accounts.views.getAuthToken),
     path('common/', include('common.urls')),
     path('recipe/', include('recipe.urls')),
     path('refri/', include('refri.urls')),

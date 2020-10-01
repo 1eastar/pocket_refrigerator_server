@@ -18,6 +18,7 @@ class HonorSerializer(serializers.ModelSerializer):
         fields = ('pk', 'name', 'created_at', 'honor_icon')
 
 class UserSerializer(serializers.ModelSerializer):
+    icon = IconSerializer()
     class Meta:
         model = models.User
         exclude = ['password']
