@@ -52,7 +52,7 @@ class ItemListView(APIView):
 
     def get(self, request, format=None):
         user = self.request.user
-        itemlist = models.Item.objects.filter(user=user).order_by('-updated_at')
+        itemlist = models.Item.objects.filter(author=user).order_by('-updated_at')
         serializer = serializers.ItemSerializer(itemlist, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
@@ -154,7 +154,7 @@ class BasicItemListView(APIView):
 
     def get(self, request, format=None):
         user = self.request.user
-        basicitemlist = models.BasicItem.objects.filter(user=user).order_by('-updated_at')
+        basicitemlist = models.BasicItem.objects.filter(author=user).order_by('-updated_at')
         serializer = serializers.BasicItemSerializer(basicitemlist, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
