@@ -20,4 +20,5 @@ urlpatterns = [
     path('getbarcode/', views.get_barcode_data),
     # path('setbarcode/', views.set_barcode_data),
     path('report/', views.report),
+    path('icons/', views.getIconList),
 ]

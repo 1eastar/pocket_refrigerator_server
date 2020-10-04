@@ -27,7 +27,14 @@ authentication = TokenAuthentication
 if getattr(settings, 'DEBUG', 'False'):
     authentication = BasicAuthentication
 
-# authentication = BasicAuthentication
+
+@api_view(http_method_names=['GET'])
+@permission_classes([AllowAny])
+@authentication_classes([])
+def getIconList(request):
+    icon_list = models.Icon.objects.all()
+    serializer = serializers.IconSerializer(icon_list, many=True)
+    return Response(serializer.data, status=status.HTTP_200_OK)
 
 @api_view(http_method_names=['POST'])
 @permission_classes([IsAuthenticated])
