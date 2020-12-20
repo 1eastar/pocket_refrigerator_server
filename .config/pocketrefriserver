@@ -17,8 +17,8 @@ server {
     location /static/ {
         alias /srv/pocketrefriserver/staticfiles/;
     }
-    location /media/ {
-        alias /srv/pocketrefriserver/upload_files/;
+    location /upload_files/ {
+        alias /srv/pocketrefriserver/media/;
     }
 
 }
